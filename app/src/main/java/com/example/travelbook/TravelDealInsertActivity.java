@@ -32,7 +32,6 @@ public class TravelDealInsertActivity extends AppCompatActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_insert);
-        FirebaseUtil.openFBReference("traveldeals",this);
         mFirebaseDatabase = FirebaseUtil.sFirebaseDatabase;
         mDatabaseReference = FirebaseUtil.sDatabaseReference;
         txtTitle = findViewById(R.id.txtTitle);
@@ -79,6 +78,16 @@ public class TravelDealInsertActivity extends AppCompatActivity {
      public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater localMenuInflater=getMenuInflater();
         localMenuInflater.inflate(R.menu.insert_deal_menu,menu);
+        if(FirebaseUtil.isAdminUser){
+            menu.findItem(R.id.delete).setVisible(true);
+            menu.findItem(R.id.save).setVisible(true);
+            enabledEdit(true);
+        }
+        else {
+            menu.findItem(R.id.delete).setVisible(false);
+            menu.findItem(R.id.save).setVisible(false);
+            enabledEdit(false);
+        }
         return true;
     }
 
@@ -130,5 +139,11 @@ public class TravelDealInsertActivity extends AppCompatActivity {
     }
     private void backToList(){
         startActivity(new Intent(TravelDealInsertActivity.this, ListActivity.class));
+    }
+
+    private  void enabledEdit(boolean isEnabled){
+        txtPrice.setEnabled(isEnabled);
+        txtDescription.setEnabled(isEnabled);
+        txtTitle.setEnabled(isEnabled);
     }
 }

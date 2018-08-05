@@ -2,9 +2,14 @@ package com.example.travelbook;
 
 import android.app.Activity;
 import android.support.annotation.NonNull;
+import android.support.annotation.Nullable;
 
 import com.firebase.ui.auth.AuthUI;
+import com.firebase.ui.auth.data.model.User;
 import com.google.firebase.auth.FirebaseAuth;
+import com.google.firebase.database.ChildEventListener;
+import com.google.firebase.database.DataSnapshot;
+import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
 
@@ -19,14 +24,14 @@ public class FirebaseUtil {
     private static FirebaseUtil sFirebaseUtil;
     public static FirebaseAuth sFirebaseAuth;
     public static FirebaseAuth.AuthStateListener sAuthStateListener;
-    private static Activity sCallerActivity;
+    private static ListActivity sCallerActivity;
 
     public static boolean isAdminUser;
     private static final int RC_SIGN_IN = 123;
 
     private FirebaseUtil(){}
 
-    public static void  openFBReference(String ref,Activity callerActivity){
+    public static void  openFBReference(String ref,final ListActivity callerActivity){
         if(sFirebaseUtil==null) {
             sFirebaseUtil=new FirebaseUtil();
             sFirebaseDatabase = FirebaseDatabase.getInstance();
@@ -42,6 +47,7 @@ public class FirebaseUtil {
                         else
                         {
                             String UserId= sFirebaseAuth.getUid();
+                            checkAdminAccess(UserId);
                         }
                 }
             };
@@ -50,6 +56,40 @@ public class FirebaseUtil {
         sDatabaseReference=sFirebaseDatabase.getReference().child(ref);
 
     }
+
+    private static void checkAdminAccess(String pUserId) {
+        FirebaseUtil.isAdminUser=false;
+        DatabaseReference localDatabaseReference=sFirebaseDatabase.getReference().child("administrators").child(pUserId);
+        ChildEventListener localEventListener=new ChildEventListener() {
+            @Override
+            public void onChildAdded(@NonNull DataSnapshot pDataSnapshot, @Nullable String pS) {
+                FirebaseUtil.isAdminUser=true;
+                sCallerActivity.showMenu();
+            }
+
+            @Override
+            public void onChildChanged(@NonNull DataSnapshot pDataSnapshot, @Nullable String pS) {
+
+            }
+
+            @Override
+            public void onChildRemoved(@NonNull DataSnapshot pDataSnapshot) {
+
+            }
+
+            @Override
+            public void onChildMoved(@NonNull DataSnapshot pDataSnapshot, @Nullable String pS) {
+
+            }
+
+            @Override
+            public void onCancelled(@NonNull DatabaseError pDatabaseError) {
+
+            }
+        };
+        localDatabaseReference.addChildEventListener(localEventListener);
+    }
+
     private static void SignIn()
     {
         List<AuthUI.IdpConfig> providers = Arrays.asList(

@@ -41,6 +41,14 @@ public class ListActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         MenuInflater localMenuInflater=getMenuInflater();
         localMenuInflater.inflate(R.menu.home_list_menu,menu);
+
+        MenuItem localItem=menu.findItem(R.id.next);
+        if(FirebaseUtil.isAdminUser){
+            localItem.setVisible(true);
+        }
+        else {
+            localItem.setVisible(false);
+        }
         return true;
     }
 
@@ -85,5 +93,10 @@ public class ListActivity extends AppCompatActivity {
     protected void onStop() {
         super.onStop();
         FirebaseUtil.detachAuthListener();
+    }
+
+    public void showMenu(){
+        invalidateOptionsMenu();
+
     }
 }
