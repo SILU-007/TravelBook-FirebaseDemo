@@ -86,7 +86,7 @@ public class ListActivity extends AppCompatActivity {
     protected void onResume() {
         super.onResume();
         FirebaseUtil.attachAuthListener();
-       initMethod();
+       //initMethod();
     }
 
     @Override

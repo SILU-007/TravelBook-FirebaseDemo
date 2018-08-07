@@ -2,6 +2,7 @@ package com.example.travelbook;
 
 import android.content.Context;
 import android.content.Intent;
+import android.content.res.Resources;
 import android.support.annotation.NonNull;
 import android.support.annotation.Nullable;
 import android.support.v7.widget.RecyclerView;
@@ -9,6 +10,7 @@ import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.ImageView;
 import android.widget.TextView;
 
 import com.google.firebase.database.ChildEventListener;
@@ -16,6 +18,7 @@ import com.google.firebase.database.DataSnapshot;
 import com.google.firebase.database.DatabaseError;
 import com.google.firebase.database.DatabaseReference;
 import com.google.firebase.database.FirebaseDatabase;
+import com.squareup.picasso.Picasso;
 
 import java.util.ArrayList;
 
@@ -51,6 +54,8 @@ public class DealsAdapter extends RecyclerView.Adapter<DealsAdapter.DealAdapter>
         Log.e("Deals","BINDER: "+localTravelDeal.getTitle()+position);
 //        holder.mTextView.setText(localTravelDeal.getTitle());
         holder.bind(localTravelDeal);
+        Log.d("Deals","url: "+localTravelDeal.getImageUrl());
+        holder.showImage(localTravelDeal.getImageUrl());
     }
 
     @Override
@@ -117,6 +122,7 @@ public class DealsAdapter extends RecyclerView.Adapter<DealsAdapter.DealAdapter>
         private TextView mTitle;
         private TextView mDescription;
         private TextView mPrice;
+        private ImageView mImageView;
         private onClickListenerInterface mListenerInterface;
 
         public DealAdapter(View itemView) {
@@ -124,6 +130,7 @@ public class DealsAdapter extends RecyclerView.Adapter<DealsAdapter.DealAdapter>
             mTitle= itemView.findViewById(R.id.textTitle);
             mDescription=itemView.findViewById(R.id.textDescription);
             mPrice=itemView.findViewById(R.id.textPrice);
+            mImageView=itemView.findViewById(R.id.imageViewDeal);
             itemView.setOnClickListener(this);
 
         }
@@ -133,6 +140,8 @@ public class DealsAdapter extends RecyclerView.Adapter<DealsAdapter.DealAdapter>
             mDescription.setText(deal.getDescription());
             String price="Rs."+deal.getPrice();
             mPrice.setText(price);
+            showImage(deal.getImageUrl());
+
         }
 
         @Override
@@ -146,7 +155,18 @@ public class DealsAdapter extends RecyclerView.Adapter<DealsAdapter.DealAdapter>
             v.getContext().startActivity(localIntent);
 
         }
+        public void showImage(String url) {
+            if (url != null && !url.isEmpty()) {
 
+                Picasso.get()
+                        .load(url)
+                        .resize(80,80)
+                        .centerCrop()
+                        .placeholder(R.drawable.image)
+                        .into(mImageView);
+                // Glide.with(this).load(url).into(mImageView);
+            }
+        }
 
     }
 }

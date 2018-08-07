@@ -1,6 +1,7 @@
 package com.example.travelbook;
 
 import android.content.Intent;
+import android.content.res.Resources;
 import android.net.Uri;
 import android.support.annotation.NonNull;
 import android.support.v7.app.AppCompatActivity;
@@ -12,11 +13,15 @@ import android.view.MenuItem;
 import android.view.View;
 import android.widget.Button;
 import android.widget.EditText;
+import android.widget.ImageView;
 import android.widget.ProgressBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
+import com.bumptech.glide.Glide;
+import com.google.android.gms.tasks.Continuation;
 import com.google.android.gms.tasks.OnCompleteListener;
+import com.google.android.gms.tasks.OnFailureListener;
 import com.google.android.gms.tasks.OnSuccessListener;
 import com.google.android.gms.tasks.Task;
 import com.google.firebase.database.ChildEventListener;
@@ -25,9 +30,13 @@ import com.google.firebase.database.FirebaseDatabase;
 import com.google.firebase.storage.OnProgressListener;
 import com.google.firebase.storage.StorageReference;
 import com.google.firebase.storage.UploadTask;
+import com.squareup.picasso.Picasso;
 
 import java.io.File;
 import java.text.DecimalFormat;
+import java.util.Objects;
+
+import retrofit2.http.Url;
 
 
 public class TravelDealInsertActivity extends AppCompatActivity {
@@ -37,8 +46,8 @@ public class TravelDealInsertActivity extends AppCompatActivity {
     private EditText txtTitle;
     private EditText txtDescription;
     private EditText txtPrice;
-    private Button mButton;
-    private TextView mViewUpload;
+    private ImageView mImageView;
+
     private ProgressBar mProgressBar;
     private static int REQ_CODE = 42;
 
@@ -52,10 +61,11 @@ public class TravelDealInsertActivity extends AppCompatActivity {
         mFirebaseDatabase = FirebaseUtil.sFirebaseDatabase;
         mDatabaseReference = FirebaseUtil.sDatabaseReference;
         txtTitle = findViewById(R.id.txtTitle);
+        mImageView = findViewById(R.id.image);
         txtDescription = findViewById(R.id.txtDescription);
         txtPrice = findViewById(R.id.txtPrice);
-        mViewUpload=findViewById(R.id.txtUpload);
-        mProgressBar=findViewById(R.id.progressBarUpload);
+
+        mProgressBar = findViewById(R.id.progressBarUpload);
 
         Intent localIntent = getIntent();
         currentDeal = (TravelDeal) localIntent.getSerializableExtra("clickedDeal");
@@ -68,6 +78,8 @@ public class TravelDealInsertActivity extends AppCompatActivity {
 
         Button btnImage = findViewById(R.id.btnImage);
         getUploadImage(btnImage);
+        if(currentDeal.getImageUrl()!=null)
+        showImage(currentDeal.getImageUrl());
 
     }
 
@@ -176,28 +188,90 @@ public class TravelDealInsertActivity extends AppCompatActivity {
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
         if (requestCode == REQ_CODE && resultCode == RESULT_OK) {
-            Uri imageUri = data.getData();
-            //  Log.d("Deals", image.getName());
-            StorageReference ref = FirebaseUtil.sStorageReference.child("images/" + imageUri.getLastPathSegment());
-            UploadTask uploadTask = ref.putFile(imageUri);
-            uploadTask.addOnProgressListener(this, new OnProgressListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onProgress(UploadTask.TaskSnapshot pTaskSnapshot) {
-                    mProgressBar.setVisibility(View.VISIBLE);
-                    double progress = (100.0 * pTaskSnapshot.getBytesTransferred()) / pTaskSnapshot.getTotalByteCount();
-                    String s=new DecimalFormat("##").format(progress);
-                    mViewUpload.setText( " "+s+"%");
-                }
-            }).addOnSuccessListener(this, new OnSuccessListener<UploadTask.TaskSnapshot>() {
-                @Override
-                public void onSuccess(UploadTask.TaskSnapshot pTaskSnapshot) {
-                    mProgressBar.setVisibility(View.INVISIBLE);
-                    mViewUpload.setVisibility(View.INVISIBLE);
-                }
-            });
+            final Uri imageUri = data.getData();
+
+            try {
+                Upload_DownloadUrl(imageUri);
+            } catch (Exception pE) {
+                pE.printStackTrace();
+            }
 
         }
 
+    }
+
+    private void Upload_DownloadUrl(Uri pImageUri) throws Exception {
+        Uri image = null;
+        if (pImageUri != null) {
+            showImage(pImageUri.toString());
+            image = FilePathNameExtractor(pImageUri);
+        }
+        final StorageReference ref = FirebaseUtil.sStorageReference.child("images/" + image);
+
+        ref.putFile(pImageUri).
+                addOnProgressListener(new OnProgressListener<UploadTask.TaskSnapshot>() {
+                    @Override
+                    public void onProgress(UploadTask.TaskSnapshot pTaskSnapshot) {
+                        mProgressBar.setVisibility(View.VISIBLE);
+                        double progress = (100.0 * pTaskSnapshot.getBytesTransferred()) / pTaskSnapshot.getTotalByteCount();
+                        mProgressBar.setProgress((int) progress);
+//                        String s = new DecimalFormat("##").format(progress);
+
+                    }
+                })
+                .continueWithTask(new Continuation<UploadTask.TaskSnapshot, Task<Uri>>() {
+                    @Override
+                    public Task<Uri> then(@NonNull Task<UploadTask.TaskSnapshot> task) throws Exception {
+                        // Forward any exceptions
+                        if (!task.isSuccessful()) {
+                            throw task.getException();
+                        }
+
+                        return ref.getDownloadUrl();
+                    }
+                })
+                .addOnSuccessListener(new OnSuccessListener<Uri>() {
+                    @Override
+                    public void onSuccess(@NonNull Uri downloadUri) {
+
+                        currentDeal.setImageUrl(downloadUri.toString());
+                            mProgressBar.setVisibility(View.GONE);
+                        Log.d("Firebase url", "" + downloadUri.toString());
+                        showImage(downloadUri.toString());
+                    }
+                })
+                .addOnFailureListener(new OnFailureListener() {
+                    @Override
+                    public void onFailure(@NonNull Exception exception) {
+
+                    }
+                });
+    }
+
+    private Uri FilePathNameExtractor(Uri pImageUri) {
+        String path = pImageUri.getLastPathSegment();
+        String filename = path.substring(path.lastIndexOf("/") + 1);
+        String file;
+//        if (filename.indexOf(".") > 0) {
+//            file = filename.substring(0, filename.lastIndexOf("."));
+//        } else {
+//            file = filename;
+//        }
+
+        return Uri.parse(filename);
+        //   Log.d("DealsPath", filename);
+    }
+
+    public void showImage(String url) {
+        if (url != null && !url.isEmpty()) {
+            int width = Resources.getSystem().getDisplayMetrics().widthPixels;
+            Picasso.get()
+                    .load(url)
+                    .resize(width,(width*9)/10)
+                    .centerCrop()
+                    .into(mImageView);
+            // Glide.with(this).load(url).into(mImageView);
+        }
     }
 
 
